@@ -1,0 +1,374 @@
+#include <iostream>
+#include <iomanip>
+#include <fstream>
+#include <algorithm>
+#include <chrono>
+#include <string>
+#include <vector>
+#include "CSVparser.hpp"
+
+using namespace std;
+using namespace std::chrono;
+
+//============================================================================
+// Data Structures
+//============================================================================
+
+/**
+ * @brief Structure representing a bid with ID, title, fund, and amount.
+ */
+struct Bid {
+    string bidId;  ///< Unique identifier
+    string title;
+    string fund;
+    double amount;
+
+    Bid() : amount(0.0) {}
+};
+
+/**
+ * @brief Node structure for BST, containing a Bid and child pointers.
+ */
+struct Node {
+    Bid bid;
+    Node* left;
+    Node* right;
+
+    Node() : left(nullptr), right(nullptr) {}
+    Node(const Bid& aBid) : bid(aBid), left(nullptr), right(nullptr) {}
+};
+
+//============================================================================
+// Binary Search Tree Class
+//============================================================================
+
+/**
+ * @class BinarySearchTree
+ * @brief Implements a Binary Search Tree for storing bids.
+ */
+class BinarySearchTree {
+private:
+    Node* root;
+
+    // Helper functions
+    void destroyTree(Node* node);
+    void addNode(Node* node, const Bid& bid);
+    void inOrder(Node* node) const;
+    void preOrder(Node* node) const;
+    void postOrder(Node* node) const;
+    Node* removeNode(Node* node, const string& bidId);
+
+public:
+    BinarySearchTree();
+    virtual ~BinarySearchTree();
+
+    // Core operations
+    void Insert(const Bid& bid);
+    void Remove(const string& bidId);
+    Bid Search(const string& bidId) const;
+
+    // Traversals
+    void InOrder() const;
+    void PreOrder() const;
+    void PostOrder() const;
+
+    // Utilities
+    int height(Node* node) const;
+    int countNodes(Node* node) const;
+    bool isBalanced(Node* node) const;
+
+    Node* getRoot() const { return root; }
+};
+
+//============================================================================
+// Implementation
+//============================================================================
+
+BinarySearchTree::BinarySearchTree() : root(nullptr) {}
+
+BinarySearchTree::~BinarySearchTree() {
+    destroyTree(root);
+    root = nullptr;
+}
+
+/**
+ * @brief Recursively deallocates all nodes in the tree.
+ */
+void BinarySearchTree::destroyTree(Node* node) {
+    if (node != nullptr) {
+        destroyTree(node->left);
+        destroyTree(node->right);
+        delete node;
+    }
+}
+
+/**
+ * @brief Inserts a new bid into the BST.
+ */
+void BinarySearchTree::Insert(const Bid& bid) {
+    // Check for duplicate
+    Bid existing = Search(bid.bidId);
+    if (!existing.bidId.empty()) {
+        cout << " Duplicate bid ID found, skipping insert: " << bid.bidId << endl;
+        return;
+    }
+
+    if (root == nullptr) {
+        root = new Node(bid);
+    } else {
+        addNode(root, bid);
+    }
+}
+
+/**
+ * @brief Recursive insertion helper.
+ */
+void BinarySearchTree::addNode(Node* node, const Bid& bid) {
+    if (bid.bidId < node->bid.bidId) {
+        if (node->left == nullptr) {
+            node->left = new Node(bid);
+        } else {
+            addNode(node->left, bid);
+        }
+    } else {
+        if (node->right == nullptr) {
+            node->right = new Node(bid);
+        } else {
+            addNode(node->right, bid);
+        }
+    }
+}
+
+/**
+ * @brief Searches for a bid by ID.
+ */
+Bid BinarySearchTree::Search(const string& bidId) const {
+    Node* current = root;
+    while (current != nullptr) {
+        if (current->bid.bidId == bidId) {
+            return current->bid;
+        } else if (bidId < current->bid.bidId) {
+            current = current->left;
+        } else {
+            current = current->right;
+        }
+    }
+    return Bid();
+}
+
+/**
+ * @brief Removes a bid from the tree.
+ */
+void BinarySearchTree::Remove(const string& bidId) {
+    root = removeNode(root, bidId);
+}
+
+/**
+ * @brief Recursive node removal helper.
+ */
+Node* BinarySearchTree::removeNode(Node* node, const string& bidId) {
+    if (node == nullptr) return node;
+
+    if (bidId < node->bid.bidId) {
+        node->left = removeNode(node->left, bidId);
+    } else if (bidId > node->bid.bidId) {
+        node->right = removeNode(node->right, bidId);
+    } else {
+        if (node->left == nullptr) {
+            Node* temp = node->right;
+            delete node;
+            return temp;
+        } else if (node->right == nullptr) {
+            Node* temp = node->left;
+            delete node;
+            return temp;
+        } else {
+            Node* temp = node->right;
+            while (temp && temp->left != nullptr) temp = temp->left;
+            node->bid = temp->bid;
+            node->right = removeNode(node->right, temp->bid.bidId);
+        }
+    }
+    return node;
+}
+
+//============================================================================
+// Traversals
+//============================================================================
+
+void BinarySearchTree::InOrder() const { inOrder(root); }
+void BinarySearchTree::PreOrder() const { preOrder(root); }
+void BinarySearchTree::PostOrder() const { postOrder(root); }
+
+void BinarySearchTree::inOrder(Node* node) const {
+    if (node != nullptr) {
+        inOrder(node->left);
+        cout << "-------------------------------------------\n";
+        cout << "Bid ID: " << node->bid.bidId << "\n";
+        cout << "Title : " << node->bid.title << "\n";
+        cout << "Amount: $" << fixed << setprecision(2) << node->bid.amount << "\n";
+        cout << "Fund  : " << node->bid.fund << "\n";
+        inOrder(node->right);
+    }
+}
+
+void BinarySearchTree::preOrder(Node* node) const {
+    if (node != nullptr) {
+        cout << node->bid.bidId << " | " << node->bid.title << endl;
+        preOrder(node->left);
+        preOrder(node->right);
+    }
+}
+
+void BinarySearchTree::postOrder(Node* node) const {
+    if (node != nullptr) {
+        postOrder(node->left);
+        postOrder(node->right);
+        cout << node->bid.bidId << " | " << node->bid.title << endl;
+    }
+}
+
+//============================================================================
+// Tree Utility Functions
+//============================================================================
+
+int BinarySearchTree::height(Node* node) const {
+    if (node == nullptr) return 0;
+    return 1 + max(height(node->left), height(node->right));
+}
+
+int BinarySearchTree::countNodes(Node* node) const {
+    if (node == nullptr) return 0;
+    return 1 + countNodes(node->left) + countNodes(node->right);
+}
+
+bool BinarySearchTree::isBalanced(Node* node) const {
+    if (node == nullptr) return true;
+    int lh = height(node->left);
+    int rh = height(node->right);
+    return abs(lh - rh) <= 1 && isBalanced(node->left) && isBalanced(node->right);
+}
+
+//============================================================================
+// File Loader and Persistence
+//============================================================================
+
+/**
+ * @brief Loads bids from a CSV file.
+ */
+class BidLoader {
+public:
+    static vector<Bid> loadCSV(const string& csvPath) {
+        vector<Bid> bids;
+        cout << "Loading CSV file: " << csvPath << endl;
+
+        try {
+            csv::Parser file(csvPath);
+            for (unsigned int i = 0; i < file.rowCount(); i++) {
+                Bid bid;
+                bid.bidId = file[i][1];
+                bid.title = file[i][0];
+                bid.fund = file[i][8];
+                bid.amount = stod(file[i][4].substr(1));
+                bids.push_back(bid);
+            }
+        } catch (csv::Error &e) {
+            cerr << "CSV Parsing Error: " << e.what() << endl;
+        }
+        return bids;
+    }
+};
+
+/**
+ * @brief Saves all bids to CSV via in-order traversal.
+ */
+void saveBids(Node* node, ofstream& out) {
+    if (!node) return;
+    saveBids(node->left, out);
+    out << node->bid.bidId << "," << node->bid.title << "," << node->bid.fund << "," << node->bid.amount << "\n";
+    saveBids(node->right, out);
+}
+
+void exportBids(BinarySearchTree* bst, const string& filename) {
+    ofstream out(filename);
+    out << "BidID,Title,Fund,Amount\n";
+    saveBids(bst->getRoot(), out);
+    cout << " Bids successfully saved to " << filename << endl;
+}
+
+//============================================================================
+// Main
+//============================================================================
+
+int main() {
+    BinarySearchTree bst;
+    vector<Bid> bids;
+    string csvPath = "eBid_Monthly_Sales.csv";
+    string bidKey = "98223";
+
+    int choice = 0;
+    while (choice != 9) {
+        cout << "\n========== MENU ==========\n";
+        cout << "1. Load Bids\n";
+        cout << "2. Display All Bids (In-Order)\n";
+        cout << "3. Find Bid\n";
+        cout << "4. Remove Bid\n";
+        cout << "5. Tree Statistics\n";
+        cout << "6. Save Bids to CSV\n";
+        cout << "9. Exit\n";
+        cout << "==========================\n";
+        cout << "Enter choice: ";
+        cin >> choice;
+
+        switch (choice) {
+            case 1: {
+                auto start = high_resolution_clock::now();
+                bids = BidLoader::loadCSV(csvPath);
+                for (const auto& b : bids) bst.Insert(b);
+                auto end = high_resolution_clock::now();
+                cout << " " << bids.size() << " bids loaded in "
+                     << duration_cast<milliseconds>(end - start).count() << " ms\n";
+                break;
+            }
+            case 2:
+                bst.InOrder();
+                break;
+            case 3: {
+                cout << "Enter Bid ID to search: ";
+                cin >> bidKey;
+                auto start = high_resolution_clock::now();
+                Bid bid = bst.Search(bidKey);
+                auto end = high_resolution_clock::now();
+                if (!bid.bidId.empty()) {
+                    cout << "\n--- Bid Found ---\n";
+                    cout << "ID: " << bid.bidId << "\nTitle: " << bid.title
+                         << "\nAmount: $" << bid.amount << "\nFund: " << bid.fund << endl;
+                } else {
+                    cout << " Bid ID " << bidKey << " not found.\n";
+                }
+                cout << "Search time: " << duration_cast<microseconds>(end - start).count() << " µs\n";
+                break;
+            }
+            case 4:
+                cout << "Enter Bid ID to remove: ";
+                cin >> bidKey;
+                bst.Remove(bidKey);
+                cout << " Bid removed if it existed.\n";
+                break;
+            case 5:
+                cout << "Tree Height: " << bst.height(bst.getRoot()) << endl;
+                cout << "Node Count : " << bst.countNodes(bst.getRoot()) << endl;
+                cout << "Balanced   : " << (bst.isBalanced(bst.getRoot()) ? "Yes" : "No") << endl;
+                break;
+            case 6:
+                exportBids(&bst, "output_bids.csv");
+                break;
+            case 9:
+                cout << "Goodbye!\n";
+                break;
+            default:
+                cout << "Invalid option, please try again.\n";
+        }
+    }
+    return 0;
+}
