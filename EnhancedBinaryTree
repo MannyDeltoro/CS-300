@@ -10,13 +10,7 @@
 using namespace std;
 using namespace std::chrono;
 
-//============================================================================
-// Data Structures
-//============================================================================
 
-/**
- * @brief Structure representing a bid with ID, title, fund, and amount.
- */
 struct Bid {
     string bidId;  ///< Unique identifier
     string title;
@@ -38,9 +32,6 @@ struct Node {
     Node(const Bid& aBid) : bid(aBid), left(nullptr), right(nullptr) {}
 };
 
-//============================================================================
-// Binary Search Tree Class
-//============================================================================
 
 /**
  * @class BinarySearchTree
@@ -80,9 +71,7 @@ public:
     Node* getRoot() const { return root; }
 };
 
-//============================================================================
-// Implementation
-//============================================================================
+
 
 BinarySearchTree::BinarySearchTree() : root(nullptr) {}
 
@@ -192,9 +181,7 @@ Node* BinarySearchTree::removeNode(Node* node, const string& bidId) {
     return node;
 }
 
-//============================================================================
-// Traversals
-//============================================================================
+
 
 void BinarySearchTree::InOrder() const { inOrder(root); }
 void BinarySearchTree::PreOrder() const { preOrder(root); }
@@ -228,9 +215,7 @@ void BinarySearchTree::postOrder(Node* node) const {
     }
 }
 
-//============================================================================
-// Tree Utility Functions
-//============================================================================
+
 
 int BinarySearchTree::height(Node* node) const {
     if (node == nullptr) return 0;
@@ -249,9 +234,7 @@ bool BinarySearchTree::isBalanced(Node* node) const {
     return abs(lh - rh) <= 1 && isBalanced(node->left) && isBalanced(node->right);
 }
 
-//============================================================================
-// File Loader and Persistence
-//============================================================================
+
 
 /**
  * @brief Loads bids from a CSV file.
@@ -296,9 +279,7 @@ void exportBids(BinarySearchTree* bst, const string& filename) {
     cout << " Bids successfully saved to " << filename << endl;
 }
 
-//============================================================================
-// Main
-//============================================================================
+
 
 int main() {
     BinarySearchTree bst;
